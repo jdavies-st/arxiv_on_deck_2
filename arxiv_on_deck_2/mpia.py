@@ -12,25 +12,14 @@ import re
 
 
 def parse_mpia_staff_list() -> Sequence[str]:
-    """ Parse the multi-page table from the MPIA website and returns the name column
+    """ Parse the staff table from the MPIA website and returns the name column
     :returns: list of names (full names)
     """
-    mitarbeiter_url = 'https://www.mpia.de/institut/mitarbeiter?letter=Alle&seite={pagenum}'
-    data = []
-    seen = set()
-    for pagenum in range(1, 100):
-        response = requests.get(mitarbeiter_url.format(pagenum=pagenum))
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, 'html.parser')
-        lst = [k.text for k in soup.find_all('span', attrs={'class': 'employee_name'})]
-        if not lst:
-            break
-        new_names = [name for name in lst if name not in seen]
-        if not new_names:
-            break
-        seen.update(new_names)
-        data.extend(new_names)
-    return data
+    mitarbeiter_url = 'https://www.mpia.de/institut/mitarbeiter?letter=Alle'
+    response = requests.get(mitarbeiter_url)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.content, 'html.parser')
+    return [k.text for k in soup.find_all('span', attrs={'class': 'employee_name'})]
 
 
 def get_initials(name: str) -> str:
@@ -48,6 +37,7 @@ def get_initials(name: str) -> str:
         initials.append(current)
     initials.append(split[-1])
     return ' '.join(initials)
+
 
 def get_special_corrections(initials_name:str) -> str:
     """ Handle non-generic cases of initials
@@ -127,6 +117,7 @@ def consider_variations(name: str) -> str:
                    .replace("Ñ", "N")
     if new_name != name:
         return new_name
+
 
 def strip_titles(name: str) -> str:
     """ Remove any title from name which could mess up with author parsing 
