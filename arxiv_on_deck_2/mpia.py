@@ -22,6 +22,19 @@ def parse_mpia_staff_list() -> Sequence[str]:
     return [k.text for k in soup.find_all('span', attrs={'class': 'employee_name'})]
 
 
+def correct_full_name(name: str) -> str:
+    """ Replace a name with its corrected publication form if one is known
+    :param name: full name from the website
+    :returns: corrected name, or the original if no correction exists
+    """
+    corrections = {
+        'Lorena Acuna': 'Lorena Acuña',
+        'James Davies': 'James E. Davies',
+        "Raphael Hviding": "Raphael E. Hviding",
+    }
+    return corrections.get(name, name)
+
+
 def get_initials(name: str) -> str:
     """ Get the short name, e.g., A.-B. FamName
     :param name: full name
@@ -48,8 +61,6 @@ def get_special_corrections(initials_name:str) -> str:
     collected = {
     'S. R. Khoshbakht': 'S. Rezaei Kh.',
     'E. B. Torres': 'E. Bañados',
-    'L. Acuna': "L. Acuña",
-    'J. Davies': "J. E. Davies",
     }
 
     try:
@@ -131,10 +142,10 @@ def get_mpia_mitarbeiter_list() -> Sequence[str]:
     """ Get the main filtered list
     :returns: list of names (family name, full names, initials)
     """
-    data = set(parse_mpia_staff_list())
+    data = parse_mpia_staff_list()
     data = map(strip_titles, data)
+    data = map(correct_full_name, data)
     filtered_data = list(filter(filter_non_scientists, data))
-
     name_variations = filter(lambda x: x is not None,
                              [consider_variations(name) for name in filtered_data])
     mitarbeiter_list = sorted(filtered_data + list(name_variations))
