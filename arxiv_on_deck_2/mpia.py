@@ -17,15 +17,19 @@ def parse_mpia_staff_list() -> Sequence[str]:
     """
     mitarbeiter_url = 'https://www.mpia.de/institut/mitarbeiter?letter=Alle&seite={pagenum}'
     data = []
+    seen = set()
     for pagenum in range(1, 100):
-        # print(f'parsing page {pagenum}')
         response = requests.get(mitarbeiter_url.format(pagenum=pagenum))
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
-        lst = soup.find_all('span', attrs={'class': 'employee_name'})
+        lst = [k.text for k in soup.find_all('span', attrs={'class': 'employee_name'})]
         if not lst:
             break
-        data.extend([k.text for k in lst])
+        new_names = [name for name in lst if name not in seen]
+        if not new_names:
+            break
+        seen.update(new_names)
+        data.extend(new_names)
     return data
 
 
@@ -55,6 +59,7 @@ def get_special_corrections(initials_name:str) -> str:
     'S. R. Khoshbakht': 'S. Rezaei Kh.',
     'E. B. Torres': 'E. Bañados',
     'L. Acuna': "L. Acuña",
+    'J. Davies': "J. E. Davies",
     }
 
     try:
@@ -96,7 +101,7 @@ def consider_variations(name: str) -> str:
     :param name: name
     :returns: name with replacements
     """
-    # German umlaut, French accents
+    # German umlaut, French and Spanish accents
     new_name = name.replace("ö", "oe")\
                    .replace("ü", "ue")\
                    .replace("ä", "ae")\
@@ -105,9 +110,21 @@ def consider_variations(name: str) -> str:
                    .replace("é", "e")\
                    .replace("è", "e")\
                    .replace("ê", "e")\
+                   .replace("ë", "e")\
                    .replace("î", "i")\
                    .replace("û", "u")\
-                   .replace("ç", "c")
+                   .replace("ç", "c")\
+                   .replace("á", "a")\
+                   .replace("ó", "o")\
+                   .replace("í", "i")\
+                   .replace("ú", "u")\
+                   .replace("ñ", "n")\
+                   .replace("Á", "A")\
+                   .replace("É", "E")\
+                   .replace("Í", "I")\
+                   .replace("Ó", "O")\
+                   .replace("Ú", "U")\
+                   .replace("Ñ", "N")
     if new_name != name:
         return new_name
 
@@ -123,7 +140,7 @@ def get_mpia_mitarbeiter_list() -> Sequence[str]:
     """ Get the main filtered list
     :returns: list of names (family name, full names, initials)
     """
-    data = parse_mpia_staff_list()
+    data = set(parse_mpia_staff_list())
     data = map(strip_titles, data)
     filtered_data = list(filter(filter_non_scientists, data))
 
